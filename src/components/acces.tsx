@@ -1,16 +1,19 @@
 import React, { useState } from 'react'
 import { Wallet } from 'xrpl'
+import { connectClient } from '../core';
 
 interface AccessComponentProps {
   onLogin: (wallet: { address: string; secret: string }) => void
 }
 
-  const AccessComponent: React.FC<AccessComponentProps> = ({ onLogin }) => {
+const AccessComponent: React.FC<AccessComponentProps> = ({ onLogin }) => {
   const [from, setFrom] = useState<{ address: string; secret: string } | null>(null)
   const [inputAddress, setInputAddress] = useState<string>('')
   const [secret, setSecret] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<any>(null)
+  
+
 
   const handleConnect = () => {
     setError(null)
@@ -36,7 +39,7 @@ interface AccessComponentProps {
   return (
     <div style={{ padding: 20 }}>
       <h3>Acceso a la Wallet</h3>
-      
+
       <input
         type='text'
         placeholder='secret'
@@ -51,6 +54,7 @@ interface AccessComponentProps {
         onChange={e => setInputAddress(e.target.value)}
         style={{ marginRight: 9 }}
       />
+
       <button onClick={handleConnect} style={{ margin: 9 }}>Conectar</button>
       {error && <div style={{ color: 'red' }}>{error}</div>}
       {result && <div style={{ color: 'green' }}>{result}</div>}

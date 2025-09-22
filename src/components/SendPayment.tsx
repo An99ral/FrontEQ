@@ -1,15 +1,19 @@
 import React, { useState } from 'react'
 import { Client, Wallet } from 'xrpl'
 import { sendPayment } from '../core'
+import AlertTitle from '@mui/material/AlertTitle';
+import Alert from '@mui/material/Alert';
+//import {AlertCircleIcon} from 'mdi-react/AlertCircleIcon'
 
 interface SendPaymentProps {
   client: Client | null
 
 }
 
-const SendPaymentComponent: React.FC<SendPaymentProps> = ({ client }) => {
-  const [secret, setSecret] = useState<string>('')
-  const [from, setFrom] = useState<string>('')
+const SendPaymentComponent: React.FC<SendPaymentProps> = ({ wallet, client }) => {
+  const [secret] = useState(wallet.secret)
+  const [from] = useState(wallet.address) //
+
   const [to, setTo] = useState('')
   const [amount, setAmount] = useState<number>(0)
   const [result, setResult] = useState<any>(null)
@@ -23,7 +27,7 @@ const SendPaymentComponent: React.FC<SendPaymentProps> = ({ client }) => {
       setError('Debes conectar el nodo primero.')
       return
     }
-    if (!to || !amount || !secret || !from) {
+    if (!to || !amount) {
       setError('Completa todos los campos.')
       return
     }
@@ -62,8 +66,6 @@ const SendPaymentComponent: React.FC<SendPaymentProps> = ({ client }) => {
   return (
     <div>
       <h3>Enviar EQ</h3>
-      <input type='text' placeholder='secret' value={secret} onChange={e => setSecret(e.target.value)} style={{ marginRight: 9 }} />
-      <input type="text" placeholder="Desde" value={from} onChange={e => setFrom(e.target.value)} style={{ marginRight: 9 }} />
 
       <input placeholder="Destino" value={to} onChange={e => setTo(e.target.value)} style={{ marginRight: 9 }} />
       <input
@@ -73,18 +75,17 @@ const SendPaymentComponent: React.FC<SendPaymentProps> = ({ client }) => {
         onChange={e => setAmount(Number(e.target.value))} style={{ marginRight: 9 }}
       />
       <button onClick={handleSend}>Enviar</button>
-      {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
-      {result && (
-        <div style={{ background: '#eee', padding: 8, marginTop: 8 }}>
-          <div>
-            <b>engine_result:</b> {result.engine_result}
-          </div>
-          <div>
-            <b>Mensaje:</b> {result.engine_result_message}
-          </div>
-          <pre>{JSON.stringify(result, null, 2)}</pre>
-        </div>
+
+      {error && (
+        <samp style={{ display: 'block', marginTop: 10, whiteSpace: 'pre-wrap' }}>
+          <Alert severity="error">
+            <AlertTitle>Error</AlertTitle>
+            {error}
+            <button onClick={() => setError(null)} style={{ display: "flex", justifyContent: "center"}}>Cerrar</button>
+          </Alert>
+        </samp>
       )}
+
     </div>
   )
 }
