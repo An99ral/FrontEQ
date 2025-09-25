@@ -52,7 +52,7 @@ const SendPaymentComponent: React.FC<SendPaymentProps> = ({ wallet, client }) =>
       setResult(res)
     } catch (e: any) {
       console.error('Error al enviar:', e)
-      setError('Error al enviar transacción')
+      setError('Error al enviar transacción: ' + (e?.message || JSON.stringify(e)))
       if (e && (e.engine_result || e.engine_result_message)) {
         setResult(e)
       } else if (e && e.data && (e.data.engine_result || e.data.engine_result_message)) {
@@ -81,7 +81,7 @@ const SendPaymentComponent: React.FC<SendPaymentProps> = ({ wallet, client }) =>
           <Alert severity="error">
             <AlertTitle>Error</AlertTitle>
             {error}
-            <button onClick={() => setError(null)} style={{ display: "flex", justifyContent: "center"}}>Cerrar</button>
+            <button onClick={() => setError(null)} style={{ display: "flex", justifyContent: "center" }}>Cerrar</button>
           </Alert>
         </samp>
       )}

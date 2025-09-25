@@ -12,25 +12,29 @@ const AccessComponent: React.FC<AccessComponentProps> = ({ onLogin }) => {
   const [secret, setSecret] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<any>(null)
-  
-
 
   const handleConnect = () => {
     setError(null)
     setResult(null)
-    let fromWallet: Wallet
+    let fromWallet: Wallet | null = null
     try {
+      // Intenta secp256k1
       fromWallet = Wallet.fromSeed(secret, { algorithm: 'secp256k1' })
-      if (!fromWallet.classicAddress) {
-        setError('No se pudo obtener la dirección de la wallet.')
-        return
-      } else if (fromWallet.classicAddress !== inputAddress) {
-        setError('La dirección de la wallet no coincide.')
+      if (fromWallet.classicAddress === inputAddress) {
+        setFrom({ address: fromWallet.classicAddress, secret })
+        setResult('Acceso correcto')
+        onLogin({ address: fromWallet.classicAddress, secret })
         return
       }
-      setFrom({ address: fromWallet.classicAddress, secret })
-      setResult('Acceso correcto')
-      onLogin({ address: fromWallet.classicAddress, secret }) // Notifica al padre
+      // Si no coincide, intenta ed25519
+      fromWallet = Wallet.fromSeed(secret, { algorithm: 'ed25519' })
+      if (fromWallet.classicAddress === inputAddress) {
+        setFrom({ address: fromWallet.classicAddress, secret })
+        setResult('Acceso correcto')
+        onLogin({ address: fromWallet.classicAddress, secret })
+        return
+      }
+      setError('La dirección de la wallet no coincide con el secret.')
     } catch {
       setError('Secret inválido')
     }
@@ -49,7 +53,7 @@ const AccessComponent: React.FC<AccessComponentProps> = ({ onLogin }) => {
       />
       <input
         type="text"
-        placeholder="Desde"
+        placeholder="key"
         value={inputAddress}
         onChange={e => setInputAddress(e.target.value)}
         style={{ marginRight: 9 }}
