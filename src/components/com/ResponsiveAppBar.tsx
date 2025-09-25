@@ -15,7 +15,7 @@ import MenuItem from '@mui/material/MenuItem';
 import logo from '../../assets/Logo-About-EQ.png';
 
 const pages = ['home', 'payment', 'funding', 'profile'];
-const settings = ['Profile', 'Account', 'Dashboard', 'Logout'];
+const settings = ['setjudge', 'Account', 'Dashboard', 'Logout'];
 
 function ResponsiveAppBar({ onPageChange }) {
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);

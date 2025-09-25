@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Client } from 'xrpl'
 import { submitFundingCreate, toRippleTime } from '../../core/index'
 import Alert from '@mui/material/Alert'
@@ -36,6 +36,19 @@ const FundingCreateComponent: React.FC<FundingCreateProps> = ({ client, wallet, 
     const [result, setResult] = useState<any>(null)
     const [amountEQ, setAmountEQ] = useState<number>(0)
     const [showSuccess, setShowSuccess] = useState(false)
+    const [showEntryAlert, setShowEntryAlert] = useState(true);
+    const [fadeClass, setFadeClass] = useState('fade-in');
+
+    useEffect(() => {
+        // Después de 10s, inicia el fade out
+        const fadeTimer = setTimeout(() => setFadeClass('fade-out'), 10000);
+        // Después de 10.5s, oculta la alerta
+        const hideTimer = setTimeout(() => setShowEntryAlert(false), 10500);
+        return () => {
+            clearTimeout(fadeTimer);
+            clearTimeout(hideTimer);
+        };
+    }, []);
 
     const handleStageCountChange = (n: number) => {
         const count = Math.max(1, Math.min(20, isNaN(n) ? 1 : n))
@@ -101,7 +114,21 @@ const FundingCreateComponent: React.FC<FundingCreateProps> = ({ client, wallet, 
     }
 
     return (
-        <div style={{ maxWidth: 720, width: '100%' }} class="card" >
+        <div style={{ maxWidth: 720, width: '100%' }} className="card" >
+            {showEntryAlert && (
+                <Alert
+                    severity="info"
+                    onClose={() => setShowEntryAlert(false)}
+                    style={{ marginBottom: 12 , backgroundColor: '#181a208c', color:"white", border: '1px solid #ffffff2c', borderRadius: 10   }}
+                    className={fadeClass}
+                   
+                >
+                    <AlertTitle>No satures los campos</AlertTitle>
+                   Por favor, asegúrate de incluir información relevante y esencial del proyecto. Enlace al sitio web oficial, redes sociales, canal de Discord, whitepaper, pitch deck, video demo, etc. Cuanta más visibilidad y contexto tengan los jueces, mejor podrán evaluar tu propuesta.
+                    
+                </Alert>
+            )}
+
             <h2>Create Funding</h2>
 
             {/* Datos básicos */}
@@ -119,12 +146,14 @@ const FundingCreateComponent: React.FC<FundingCreateProps> = ({ client, wallet, 
                     margin: '6px 0',
                     padding: '8px'
                 }} />
+
                 <input placeholder="Pool Data" value={poolData} onChange={e => setPoolData(e.target.value)} style={{
                     border: '1px solid #ffffff2c',
                     borderRadius: 6,
                     margin: '6px 0',
                     padding: '8px'
                 }} />
+
                 <input type="number" placeholder="FinishAfter (mins)" value={finishAfterMins} onChange={e => setFinishAfterMins(Number(e.target.value))} style={{
                     border: '1px solid #ffffff2c',
                     borderRadius: 6,
@@ -190,7 +219,7 @@ const FundingCreateComponent: React.FC<FundingCreateProps> = ({ client, wallet, 
                 ))}
             </div>
 
-            <button style={{ marginTop: 12 }} onClick={handleCreate} disabled={loading}>
+            <button style={{ marginTop: 12 }} onClick={handleCreate} disabled={loading} className="button">
                 {loading ? 'Enviando...' : 'Crear Funding'}
             </button>
 

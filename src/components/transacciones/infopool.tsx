@@ -6,10 +6,9 @@ interface InfoPoolProps {
     wallet: { address: string; secret: string }
     client: any;
     address: string;
-    offerSequence: number;
 }
 
-const InfoPoolComponent: React.FC<InfoPoolProps> = ({ client, address, wallet, offerSequence }) => {
+const InfoPoolComponent: React.FC<InfoPoolProps> = ({ client, address, wallet }) => {
     const [data, setData] = React.useState<any>(null);
     const [error, setError] = React.useState<string | null>(null);
 
@@ -59,22 +58,21 @@ const InfoPoolComponent: React.FC<InfoPoolProps> = ({ client, address, wallet, o
                                     <ul>
                                         {obj.Stages.map((stageObj: any, idx: number) => {
                                             const isValidated = stageObj?.Stage?.StageFlags === 262144;
+                                            const finish = stageObj?.Stage?.StageFlags === 786432;
                                             return (
                                                 <li key={idx}>
                                                     <b>{stageObj?.Stage?.StageData}</b>
-                                                    <div>
-                                                        <b>estado:</b> {isValidated ? "validado" : "pendiente"}
-                                                    </div>
+                                                    <div><b>estado:</b> {isValidated ? "validado" : "pendiente"}</div>
                                                     {isValidated && (
-                                                        
                                                         <Cerrar
                                                             client={client}
                                                             address={address}
                                                             wallet={wallet}
-                                                            
-                                                            offerSequence={obj.OfferSequence} // <-- usa el OfferSequence del pool, no del stage
+                                                            offerSequence={obj.OfferSequence}
+                                                            stageIndex={stageObj?.Stage?.StageIndex || 1}
                                                         />
                                                     )}
+                                                    {finish && <div> (finalizado) </div>}
                                                 </li>
                                             );
                                         })}

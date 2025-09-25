@@ -1,7 +1,12 @@
 import React from "react";
-import logo from "../assets/Logo-About-EQ.png"; // Usa tu logo real
+import logo from "../assets/Logo-About-EQ.png";
+import Carrusel from "./com/carrusel"; // Usa tu logo real
+interface LandProps {
+    client: any; // <-- minúscula
+}
+const LandPage: React.FC<LandProps> = ({ client }) => (
 
-const LandPage = () => (
+
     <div className="centered-section" style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         <img src={logo} alt="Equilibrium Games" className="logo" style={{ filter: "drop-shadow(0 0 2em #646cff52)", marginLeft: "auto", marginRight: "auto" }} />
         <div style={{ maxWidth: 600, textAlign: "center", marginBottom: 32 }}>
@@ -22,8 +27,8 @@ const LandPage = () => (
             }}>LEARN MORE</button>
         </div>
 
-       
-         
+        <Carrusel client={client} />
+
     </div>
 );
 

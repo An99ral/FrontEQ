@@ -24,7 +24,7 @@ body,
     left: 0;
     width: 100vw;
     min-height: 64px;
-    background: #14141410;
+    background: #14141481;
     color: #fff;
     z-index: 1100;
     display: flex;
@@ -125,7 +125,7 @@ button {
     margin-bottom: 12px;
     padding: 8px 12px;
     border-radius: 8px;
-    border: 1px solid #263040;
+    border: 1px solid #6e7d96;
     background: #181a20;
     color: #fff;
     box-sizing: border-box;
@@ -144,7 +144,7 @@ select:focus {
 
 .button-main,
 button {
-    background: #1976d2;
+    background: #43477070;
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -158,7 +158,7 @@ button {
 
 .button-main:hover,
 button:hover {
-    background: #1565c0;
+    background: #18181a9c;
 }
 
 
@@ -413,4 +413,37 @@ body::-webkit-scrollbar-thumb,
 
 .pool-stages li:first-child {
     border-top: none;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+    animation-fill-mode: forwards;
+    opacity: 1;
+}
+
+.fade-out {
+    animation: fadeOut 0.5s ease-in-out;
+    animation-fill-mode: forwards;
+    opacity: 0;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(10px);
+    }
 }

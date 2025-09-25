@@ -49,7 +49,7 @@ const FundingComponent: React.FC<FundingProps> = ({ wallet, client, onPageChange
                         />
                         {showPoolActiv
                             ? <PoolActivComponent client={client} address={wallet.address} />
-                            : <InfoPoolComponent client={client} address={wallet.address} />
+                            : <InfoPoolComponent client={client} address={wallet.address} wallet={wallet} />
                         }
                     </div>
                 )}

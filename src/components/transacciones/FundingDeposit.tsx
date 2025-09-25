@@ -47,6 +47,10 @@ const FundingDepositComponent: React.FC<FundingDepositProps> = ({ client, wallet
             if (res?.result?.engine_result === "tesSUCCESS") {
                 setShowSuccess(true)
             }
+            if (res?.result && "engine_result" in res.result && res.result.engine_result !== "tesSUCCESS") {
+                alert(res.result.engine_result_message &&"The deadline for making contributions to this fund has passed."|| res.result.engine_result && "The deadline for making contributions to this fund has passed.");
+                setResult(res);
+            }
         } catch (e: any) {
             console.error(e)
             setError(e?.message || JSON.stringify(e))
@@ -92,10 +96,11 @@ const FundingDepositComponent: React.FC<FundingDepositProps> = ({ client, wallet
             </div>
 
 
-          
+           
 
             <button style={{ marginTop: 12 }} onClick={handleCreate} disabled={loading}>
-                {loading ? 'Enviando...' : 'Crear Funding'}
+                {loading ? 'Enviando...' : 'Donar'}
+                
             </button>
 
             {error && (
@@ -130,6 +135,7 @@ const FundingDepositComponent: React.FC<FundingDepositProps> = ({ client, wallet
                         <AlertTitle>¡Pool creado!</AlertTitle>
                         Tu pool ha sido creado exitosamente.
                     </Alert>
+                   
                     <Button
                         variant="contained"
                         color="primary"

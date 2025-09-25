@@ -14,7 +14,6 @@ const PoolActivComponent: React.FC<InfoPoolProps> = ({ client, address }) => {
         const fetchData = async () => {
             try {
                 const res = await getJudgeFundingPools(client, address);
-               // console.log("Respuesta getJudgeFundingPools:", res);
                 setData(res);
             } catch (e: any) {
                 setError(e?.message || String(e));
@@ -29,16 +28,48 @@ const PoolActivComponent: React.FC<InfoPoolProps> = ({ client, address }) => {
             {error && <p>{error}</p>}
             {data && Array.isArray(data) && data.length > 0 ? (
                 data.map((pool: any, idx: number) => (
-                    <div key={idx} class="votos-grid" style={{ marginBottom: 16, padding: 12, border: '1px solid #333', borderRadius: 8 }}>
-                        
-                        <div ><b>Nombre del Pool:</b> {pool.PoolName
-                            ? hexToUtf8(pool.PoolName)
-                            : ''}</div>
+                    <div key={idx} className="votos-grid" style={{ marginBottom: 16, padding: 12, border: '1px solid #333', borderRadius: 8 }}>
+                        <div><b>Nombre del Pool:</b> {pool.PoolName ? hexToUtf8(pool.PoolName) : ''}</div>
                         <div><b>Secuencia:</b> {pool.PoolSequence}</div>
                         <div><b>Dueño:</b> {pool.PoolOwner}</div>
                         <div><b>Juez:</b> {pool.Judge}</div>
                         <div><b>Fecha límite:</b> {pool.CancelAfter ? new Date((pool.CancelAfter + 946684800) * 1000).toLocaleString() : 'N/A'}</div>
                         <div><b>Estado:</b> {pool.Status}</div>
+                        <div><b>Descripción:</b> {pool.PoolData ? hexToUtf8(pool.PoolData) : ''}</div>
+                        <div><h3>Etapas:</h3>
+
+                            <ul>
+                                {Array.isArray(pool.Stages) && pool.Stages.length > 0 ? (
+                                    pool.Stages.map((stageObj: any, sidx: number) => {
+                                        const isValidated = stageObj.StageFlags === 262144;
+                                        const finish = stageObj.StageFlags === 786432;
+                                        const pendiente = !isValidated && !finish;
+                                        return (
+                                            <li key={sidx}>
+
+                                                <div>
+                                                   
+
+                                                    <b>estado:</b> {isValidated ? "validado" : finish ? "finalizado" : "pendiente"}
+                                                    <div>Índice: {stageObj.StageIndex}</div>
+
+                                                </div>
+                                                {pendiente && (
+                                                    <div style={{ marginLeft: 12 }}>
+
+
+
+                                                        <div>Flags: {stageObj.StageFlags}</div>
+                                                    </div>
+                                                )}
+                                            </li>
+                                        );
+                                    })
+                                ) : (
+                                    <li>No hay etapas</li>
+                                )}
+                            </ul>
+                        </div>
                         <div><b>Tiempo restante:</b> {pool.TimeLeft}</div>
                     </div>
                 ))
@@ -51,7 +82,6 @@ const PoolActivComponent: React.FC<InfoPoolProps> = ({ client, address }) => {
 
 function hexToUtf8(hex: string) {
     if (!hex) return '';
-    // Si el hex tiene longitud impar, lo ajusta
     if (hex.length % 2 !== 0) hex = '0' + hex;
     return decodeURIComponent(
         hex.replace(/(..)/g, '%$1')

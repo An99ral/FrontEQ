@@ -188,10 +188,15 @@ export const getObjects = async (client: Client, address: string) => {
 }
 
 // Utilidad browser-safe para decodificar hex a UTF-8
-export const hexToUtf8 = (hex: string) => {
-  if (!hex) return ''
-  if (hex.length % 2 !== 0) hex = '0' + hex
-  return decodeURIComponent(hex.replace(/(..)/g, '%$1'))
+export function hexToUtf8(hex: string): string {
+  if (!hex || typeof hex !== "string" || !/^[0-9a-fA-F]+$/.test(hex)) return "";
+  try {
+    return decodeURIComponent(
+      hex.replace(/(..)/g, '%$1')
+    );
+  } catch {
+    return "";
+  }
 }
 
 //----ledger data para usuarios objeto funding
@@ -236,7 +241,12 @@ export const getJudgeFundingPools = async (
         } catch {
           // Si falla, deja el hex
         }
-
+        let PoolData = pool.PoolData || '';
+        try {
+          PoolData = Buffer.from(PoolData, 'hex').toString('utf8');
+        } catch {
+          // Si falla, deja el hex
+        }
         // Estado y tiempo
         const cancelAfter = pool.CancelAfter ?? null;
         let status = 'Unknown';
@@ -268,10 +278,20 @@ export const getJudgeFundingPools = async (
           PoolSequence: pool.OfferSequence,
           PoolName: poolName,
           PoolOwner: pool.Owner,
+          PoolData: PoolData,
           Judge: judgeAddress,
           CancelAfter: cancelAfter,
           CurrentTime: now,
           Status: status,
+          Stages: Array.isArray(pool.Stages)
+            ? pool.Stages.map((stage: any) => ({
+              StageIndex: stage.Stage?.StageIndex,
+              StageFlags: stage.Stage?.StageFlags,
+              StageData: stage.Stage?.StageData,
+              // agrega aquí cualquier otro campo que necesites
+            }))
+            : [],
+
           TimeLeft: timeLeftStr,
         };
       });
@@ -344,14 +364,14 @@ export const submitVote = async (
 //----------------------cerrar pool
 export const submitClosePool = async (
   client: Client,
-  wallet: { address: string; secret: string }, 
+  wallet: { address: string; secret: string },
   param: {
     Owner: string,
     offerSequence: number,
     StageIndex: number
   }
 ) => {
-  if (!client || !wallet || !param.offerSequence) throw new Error("Invalid parameters");  
+  if (!client || !wallet || !param.offerSequence) throw new Error("Invalid parameters");
   const Sequence = await getAccountSequence(client, wallet.address)
   const Fee = await getBaseFeeDrops(client)
   const LastLedgerSequence = await getLastLedgerSequence(client, 20)
@@ -368,10 +388,10 @@ export const submitClosePool = async (
       LastLedgerSequence
     };
     return tx
-  }  
+  }
   try {
     const tx = buildTx();
-    console.log("Datos enviados a submitClosePool:"); 
+    console.log("Datos enviados a submitClosePool:");
     console.log({
       wallet,
       param,
@@ -392,3 +412,74 @@ export const submitClosePool = async (
   }
 
 };
+// --------------------- asignar jueces
+export const submitAssignJudges = async (
+  client: Client,
+  wallet: { address: string; secret: string },
+  param: {
+    Owner: string,
+    offerSequence: number,
+    SignerQuorum: number,
+    AuthAccounts: Array<{ AuthAccount: { Account: string } }>
+  }
+) => {
+  if (!client || !wallet || !param.offerSequence) throw new Error("Invalid parameters");
+  const Sequence = await getAccountSequence(client, wallet.address)
+  const Fee = await getBaseFeeDrops(client)
+  const LastLedgerSequence = await getLastLedgerSequence(client, 20)
+
+  const buildTx = () => {
+    const tx: any = {
+      TransactionType: 156, // <-- numérico, igual al curl
+      Account: wallet.address,
+      Owner: param.Owner,
+      OfferSequence: param.offerSequence,
+      AuthAccounts: param.AuthAccounts.map(a => ({ AuthAccount: { Account: a.AuthAccount.Account } })),
+      SignerQuorum: param.SignerQuorum,
+      Sequence,
+      Fee,
+      LastLedgerSequence
+    }
+    return tx
+  }
+
+  try {
+    const tx = buildTx();
+    const res = await client.request({
+      command: "submit",
+      secret: wallet.secret,
+      tx_json: tx
+    } as any);
+    return res;
+  } catch (e) {
+    throw e;
+  }
+};
+
+
+//----------------------  funding  disponibles 
+
+export const getAvailableFundings = async (
+  client: Client,
+) => {
+  const getAvailable = await client.request({
+    command: "ledger_data",
+    params: {
+      type: "FundingPool",
+      ledger_index: "validated"
+    }
+  } as any);
+
+  // Filtra solo FundingPool, decodifica y ordena por PoolName
+  const pools = (getAvailable.result?.state || [])
+    .filter((obj: any) => obj.LedgerEntryType === "FundingPool")
+    .map((pool: any) => ({
+      ...pool,
+      PoolName: pool.PoolName ? hexToUtf8(pool.PoolName) : "",
+      PoolData: pool.PoolData ? hexToUtf8(pool.PoolData) : ""
+    }))
+    .sort((a, b) => a.PoolName.localeCompare(b.PoolName, 'es', { sensitivity: 'base' }));
+
+  console.log("getAvailableFundings pools:", pools);
+  return pools;
+}
