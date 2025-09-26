@@ -13,6 +13,7 @@ const Carrusel: React.FC<CarruselProps> = ({ client }) => {
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(0);
     const [filterLetter, setFilterLetter] = useState<string>("");
+    const [showActive, setShowActive] = useState(true); // Nuevo estado para el switch
 
     useEffect(() => {
         if (!client) {
@@ -36,23 +37,63 @@ const Carrusel: React.FC<CarruselProps> = ({ client }) => {
     const letters = Array.from(new Set(initials.filter(l => l.match(/[A-ZÁÉÍÓÚÑ]/i)))).sort();
     const numbers = Array.from(new Set(initials.filter(l => l.match(/[0-9]/)))).sort();
 
+    // Filtro por estado (activo o expirado)
+    const filteredByStatus = fundings.filter(f =>
+        showActive ? f.Status === "Activo" : f.Status === "Expirado"
+    );
+
     // Aplica el filtro por letra
     const filteredFundings = filterLetter
-        ? fundings.filter(f => (f.PoolName || "").toUpperCase().startsWith(filterLetter))
-        : fundings;
+        ? filteredByStatus.filter(f => (f.PoolName || "").toUpperCase().startsWith(filterLetter))
+        : filteredByStatus;
 
     const totalPages = Math.ceil(filteredFundings.length / CARDS_PER_PAGE);
     const visibleFundings = filteredFundings.slice(page * CARDS_PER_PAGE, (page + 1) * CARDS_PER_PAGE);
 
-    // Reinicia la página si el filtro cambia
     useEffect(() => {
         setPage(0);
-    }, [filterLetter]);
+    }, [filterLetter, showActive]);
+
+    const RIPPLE_EPOCH_OFFSET = 946684800;
 
     return (
         <div>
             <h2>Carrusel de Proyectos</h2>
-            <p>- fondos disponibles</p>
+            <p> fondos disponibles</p>
+            {/* Switch de estado */}
+            <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ color: showActive ? "#fff" : "#aaa" }}>Expirados</span>
+                <label style={{ display: "inline-block", position: "relative", width: 50, height: 24 }}>
+                    <input
+                        type="checkbox"
+                        checked={showActive}
+                        onChange={() => setShowActive(v => !v)}
+                        style={{ opacity: 0, width: 0, height: 0 }}
+                    />
+                    <span style={{
+                        position: "absolute",
+                        cursor: "pointer",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: showActive ? "#5b3ce696" : "#c5372d6e",
+                        borderRadius: 24,
+                        transition: ".4s"
+                    }} />
+                    <span style={{
+                        position: "absolute",
+                        left: showActive ? 26 : 2,
+                        top: 2,
+                        width: 20,
+                        height: 20,
+                        backgroundColor: "#fff",
+                        borderRadius: "50%",
+                        transition: ".4s"
+                    }} />
+                </label>
+                <span style={{ color: showActive ? "#ffffffb6" : "#fff" }}>Activos</span>
+            </div>
             {/* Filtro por letra o número */}
             <div style={{
                 marginBottom: 16,
@@ -78,9 +119,9 @@ const Carrusel: React.FC<CarruselProps> = ({ client }) => {
                         transition: "background 0.2s"
                     }}
                     onClick={() => setFilterLetter("")}
-                    title="Todos"
+                    title="All"
                 >
-                    <span style={{ fontSize: 14 }}>Todos</span>
+                    <span style={{ fontSize: 14 }}>All</span>
                 </button>
                 {letters.map(letter => (
                     <button
@@ -161,14 +202,22 @@ const Carrusel: React.FC<CarruselProps> = ({ client }) => {
                             padding: 20,
                             minWidth: 0,
                             boxShadow: "0 2px 8px #0002",
-                            wordBreak: "break-word",      
-                            whiteSpace: "pre-line",      
-                            overflowWrap: "break-word",   
-                            maxWidth: "100%",             
+                            wordBreak: "break-word",
+                            whiteSpace: "pre-line",
+                            overflowWrap: "break-word",
+                            maxWidth: "100%",
                         }}
                     >
                         <div>
                             <b>Nombre:</b> {funding.PoolName || <i>Sin nombre</i>}
+                        </div>
+                        <div>
+                            <b>Fecha de finalización:</b> {funding.FinishAfter
+                                ? new Date((funding.FinishAfter + RIPPLE_EPOCH_OFFSET) * 1000).toLocaleString()
+                                : "N/A"}
+                        </div>
+                        <div>
+                            <b>Estado:</b> {funding.Status || <i>N/A</i>}
                         </div>
                         <div>
                             <b>Monto:</b> {funding.Amount || <i>N/A</i>}

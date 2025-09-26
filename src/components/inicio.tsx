@@ -28,7 +28,7 @@ const InicioComponent: React.FC<InicioProps> = ({ wallet, client }) => {
         )}
 
         {activePage === "profile" && <BalanceComponent wallet={wallet} client={client} />}
-        {activePage === "setjudge" && <SetJudges wallet={wallet} client={client}  />}
+        {activePage === "setjudge" && <SetJudges wallet={wallet} client={client}   onPageChange={setActivePage} />}
       </div>
       <Footer />
     </div>

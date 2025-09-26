@@ -83,7 +83,7 @@ const VotosComponent: React.FC<VotosProps> = ({ client, address, wallet }) => {
     return (
         <div>
             <h2>Fundings donde eres juez</h2>
-          
+
 
 
             {data && Array.isArray(data) && data.length > 0 ? (
@@ -114,7 +114,7 @@ const VotosComponent: React.FC<VotosProps> = ({ client, address, wallet }) => {
                                         handleSubmit(e, pool, stageIndex, vote);
                                     }}
                                 >
-                                    <div>Nombre: {hexToUtf8(pool.PoolName)}</div>
+                                    <div>Nombre: {pool.PoolName}</div>
                                     <div>
                                         <b>Secuencia:</b>
                                         <input type="number" name="offerSequence" defaultValue={pool.PoolSequence} readOnly />
@@ -144,7 +144,7 @@ const VotosComponent: React.FC<VotosProps> = ({ client, address, wallet }) => {
                                 </form>
                             );
                         })
-                        .filter(Boolean) 
+                        .filter(Boolean)
                     }
                 </div>
             ) : (
@@ -152,12 +152,6 @@ const VotosComponent: React.FC<VotosProps> = ({ client, address, wallet }) => {
             )}
         </div>
     );
-}
-
-function hexToUtf8(hex: string) {
-    if (!hex) return '';
-    if (hex.length % 2 !== 0) hex = '0' + hex;
-    return decodeURIComponent(hex.replace(/(..)/g, '%$1'));
 }
 
 export default VotosComponent;

@@ -146,7 +146,17 @@ function ResponsiveAppBar({ onPageChange }) {
                 onClose={handleCloseUserMenu}
               >
                 {settings.map((setting) => (
-                  <MenuItem key={setting} onClick={handleCloseUserMenu}>
+                  <MenuItem
+                    key={setting}
+                    onClick={() => {
+                      handleCloseUserMenu();
+                      if (setting === "Logout") {
+                        window.location.reload();
+                      } else if (onPageChange) {
+                        onPageChange(setting.toLowerCase());
+                      }
+                    }}
+                  >
                     <Typography sx={{ textAlign: 'center' }}>{setting}</Typography>
                   </MenuItem>
                 ))}

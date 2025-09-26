@@ -2,9 +2,13 @@ import { Client, LedgerEntry, Wallet, xrpToDrops, ServerInfoResponse, LedgerInde
 
 // Conectar a nodo custom
 export const connectClient = async (nodeUrl: string) => {
-  const client = new Client(nodeUrl)
-  await client.connect()
-  return client
+  // Asegura protocolo WebSocket
+  if (!/^wss?:\/\//i.test(nodeUrl)) {
+    throw new Error(`XRPL Client requiere ws:// o wss://. Recibido: ${nodeUrl}`);
+  }
+  const client = new Client(nodeUrl);
+  await client.connect();
+  return client;
 }
 
 // Crear una nueva wallet
@@ -30,7 +34,7 @@ export const sendPayment = async (
   toAddress: string,
   amountEQ: number
 ) => {
-  console.log('Preparando transacción...')
+ // console.log('Preparando transacción...')
   const prepared = await client.autofill({
     TransactionType: 'Payment',
     Account: fromWallet.classicAddress,
@@ -41,7 +45,7 @@ export const sendPayment = async (
   const signed = fromWallet.sign(prepared)
 
   const result = await client.submitAndWait(signed.tx_blob)
-  console.log('Resultado submitAndWait:', result)
+ // console.log('Resultado submitAndWait:', result)
   return result
 }
 
@@ -110,7 +114,8 @@ export const submitFundingCreate = async (
       ...(typeof params.cancelAfter === 'number' ? { CancelAfter: params.cancelAfter } : {}),
       ...(typeof params.finishAfter === 'number' ? { FinishAfter: params.finishAfter } : {}),
       Stages: params.stages.map(s => ({ Stage: { StageIndex: s.StageIndex, StageData: s.StageData } }))
-    }
+    } 
+    console.log(tx);
     // if (withNetworkId && NetworkID) tx.NetworkID = NetworkID
     return tx
   }
@@ -177,15 +182,46 @@ export const submitFundingDeposit = async (
 
 export const getObjects = async (client: Client, address: string) => {
   try {
+    if (!address) throw new Error("address requerido");
     const res = await client.request({
-      command: 'account_objects2',
-      account: address
-    } as any)
-    return res
+      command: "account_objects",
+      account: address,
+      ledger_index: "validated",
+      limit: 400
+    } as any);
+
+    // account_objects -> NO usar .state
+    const onlyPools = (res.result?.account_objects || [])
+      .filter((o: any) => o.LedgerEntryType === "FundingPool")
+      .map((pool: any) => ({
+        ...pool,
+        PoolName: pool.PoolName ? hexToUtf8(pool.PoolName) : "",
+        PoolData: pool.PoolData ? hexToUtf8(pool.PoolData) : "",
+        Stages: Array.isArray(pool.Stages)
+          ? pool.Stages.map((s: any) => ({
+            Stage: {
+              ...s.Stage,
+              StageData: s?.Stage?.StageData ? hexToUtf8(s.Stage.StageData) : ""
+            }
+          }))
+          : []
+      }))
+      .sort((a: any, b: any) =>
+        (a.PoolName || "").localeCompare(b.PoolName || "", "es", { sensitivity: "base" })
+      );
+
+    // Devolver la MISMA forma que espera el componente
+    return {
+      ...res,
+      result: {
+        ...res.result,
+        account_objects: onlyPools
+      }
+    };
   } catch (e) {
-    throw e
+    throw e;
   }
-}
+};
 
 // Utilidad browser-safe para decodificar hex a UTF-8
 export function hexToUtf8(hex: string): string {
@@ -210,22 +246,17 @@ export const getJudgeFundingPools = async (
   const nowRippleTimestamp = () => Math.floor(Date.now() / 1000) - RIPPLE_EPOCH_UNIX
 
   try {
+    // Corregido: no usar "params" anidado en ledger_data
     const res = await client.request({
-      command: 'ledger_data',
-      params: {
-        ledger_index: 'validated',
-        type: 'FundingPool',
-        limit: 400
-      },
-
-
-
-    });
+      command: "ledger_data",
+      ledger_index: "validated",
+      type: "FundingPool",
+      limit: 400
+    } as any);
 
     const pools = res.result?.state || [];
     const now = nowRippleTimestamp();
 
-    // Filtrar pools donde el usuario es juez
     const filtered = pools
       .filter((pool: any) =>
         Array.isArray(pool.AuthAccounts) &&
@@ -234,23 +265,13 @@ export const getJudgeFundingPools = async (
         )
       )
       .map((pool: any) => {
-        // Decodificar nombre si está en hex
-        let poolName = pool.PoolName || '';
-        try {
-          poolName = Buffer.from(poolName, 'hex').toString('utf8');
-        } catch {
-          // Si falla, deja el hex
-        }
-        let PoolData = pool.PoolData || '';
-        try {
-          PoolData = Buffer.from(PoolData, 'hex').toString('utf8');
-        } catch {
-          // Si falla, deja el hex
-        }
-        // Estado y tiempo
+        // Decodificar con util browser-safe
+        const poolName = hexToUtf8(pool.PoolName || "");
+        const PoolData = hexToUtf8(pool.PoolData || "");
+
         const cancelAfter = pool.CancelAfter ?? null;
         let status = 'Unknown';
-        let timeLeft = null;
+        let timeLeft: number | null = null;
         if (cancelAfter !== null) {
           if (cancelAfter < now) {
             status = 'Expired';
@@ -260,18 +281,12 @@ export const getJudgeFundingPools = async (
           }
         }
 
-        // Formatear tiempo restante
         let timeLeftStr = '';
         if (timeLeft !== null) {
-          if (timeLeft < 60) {
-            timeLeftStr = `${timeLeft} segundos`;
-          } else if (timeLeft < 3600) {
-            timeLeftStr = `${Math.floor(timeLeft / 60)} minutos ${timeLeft % 60} segundos`;
-          } else if (timeLeft < 86400) {
-            timeLeftStr = `${Math.floor(timeLeft / 3600)} horas ${Math.floor((timeLeft % 3600) / 60)} minutos`;
-          } else {
-            timeLeftStr = `${Math.floor(timeLeft / 86400)} días ${Math.floor((timeLeft % 86400) / 3600)} horas ${Math.floor((timeLeft % 3600) / 60)} minutos`;
-          }
+          if (timeLeft < 60) timeLeftStr = `${timeLeft} segundos`;
+          else if (timeLeft < 3600) timeLeftStr = `${Math.floor(timeLeft / 60)} minutos ${timeLeft % 60} segundos`;
+          else if (timeLeft < 86400) timeLeftStr = `${Math.floor(timeLeft / 3600)} horas ${Math.floor((timeLeft % 3600) / 60)} minutos`;
+          else timeLeftStr = `${Math.floor(timeLeft / 86400)} días ${Math.floor((timeLeft % 86400) / 3600)} horas ${Math.floor((timeLeft % 3600) / 60)} minutos`;
         }
 
         return {
@@ -288,10 +303,8 @@ export const getJudgeFundingPools = async (
               StageIndex: stage.Stage?.StageIndex,
               StageFlags: stage.Stage?.StageFlags,
               StageData: stage.Stage?.StageData,
-              // agrega aquí cualquier otro campo que necesites
             }))
             : [],
-
           TimeLeft: timeLeftStr,
         };
       });
@@ -338,12 +351,12 @@ export const submitVote = async (
 
   try {
     const tx = buildTx();
-    console.log("Datos enviados a submitVote:");
+    /*console.log("Datos enviados a submitVote:");
     console.log({
       wallet,
       param,
       tx_json: tx
-    });
+    });*/
 
     const res = await client.request({
       command: "submit",
@@ -351,8 +364,8 @@ export const submitVote = async (
       tx_json: tx
     } as any);
 
-    console.log("submitVote function executed");
-    console.log(res);
+  //  console.log("submitVote function executed");
+   // console.log(res);
     return res;
 
   } catch (e) {
@@ -391,20 +404,20 @@ export const submitClosePool = async (
   }
   try {
     const tx = buildTx();
-    console.log("Datos enviados a submitClosePool:");
+  /*  console.log("Datos enviados a submitClosePool:");
     console.log({
       wallet,
       param,
       tx_json: tx
-    });
+    });*/
     const res = await client.request({
       command: "submit",
       secret: wallet.secret,
       tx_json: tx
     } as any);
 
-    console.log("submitClosePool function executed");
-    console.log(res);
+    // console.log("submitClosePool function executed");
+    // console.log(res);
     return res;
 
   } catch (e) {
@@ -423,14 +436,22 @@ export const submitAssignJudges = async (
     AuthAccounts: Array<{ AuthAccount: { Account: string } }>
   }
 ) => {
-  if (!client || !wallet || !param.offerSequence) throw new Error("Invalid parameters");
-  const Sequence = await getAccountSequence(client, wallet.address)
-  const Fee = await getBaseFeeDrops(client)
-  const LastLedgerSequence = await getLastLedgerSequence(client, 20)
+//  console.log("submitAssignJudges called with param:", param, "wallet:", wallet?.address);
+
+  // Validaciones mínimas y robustas
+  if (!client) throw new Error("Client es requerido");
+  if (!wallet?.address || !wallet?.secret) throw new Error("Wallet inválida");
+  if (!param.offerSequence == null) throw new Error("offerSequence es requerido"); // acepta 0 como válido si aplica
+  if (!param.Owner?.trim()) throw new Error("Owner es requerido");
+
+  const Sequence = await getAccountSequence(client, wallet.address);
+  const Fee = await getBaseFeeDrops(client);
+  const LastLedgerSequence = await getLastLedgerSequence(client, 20);
+  //console.log("Sequence:", Sequence, "Fee:", Fee, "LastLedgerSequence:", LastLedgerSequence);
 
   const buildTx = () => {
     const tx: any = {
-      TransactionType: 156, // <-- numérico, igual al curl
+      TransactionType: 156,
       Account: wallet.address,
       Owner: param.Owner,
       OfferSequence: param.offerSequence,
@@ -439,9 +460,10 @@ export const submitAssignJudges = async (
       Sequence,
       Fee,
       LastLedgerSequence
-    }
-    return tx
-  }
+    };
+    console.log("Built transaction:", tx);
+    return tx;
+  };
 
   try {
     const tx = buildTx();
@@ -450,8 +472,11 @@ export const submitAssignJudges = async (
       secret: wallet.secret,
       tx_json: tx
     } as any);
+   // console.log("submitAssignJudges function executed");
+   // console.log(res);
     return res;
   } catch (e) {
+   // console.error("Error en submitAssignJudges:", e);
     throw e;
   }
 };
@@ -460,26 +485,67 @@ export const submitAssignJudges = async (
 //----------------------  funding  disponibles 
 
 export const getAvailableFundings = async (
-  client: Client,
+  client: Client
 ) => {
-  const getAvailable = await client.request({
+  const res = await client.request({
     command: "ledger_data",
-    params: {
-      type: "FundingPool",
-      ledger_index: "validated"
-    }
+    ledger_index: "validated",
+    type: "FundingPool",
+    limit: 400
   } as any);
 
-  // Filtra solo FundingPool, decodifica y ordena por PoolName
-  const pools = (getAvailable.result?.state || [])
-    .filter((obj: any) => obj.LedgerEntryType === "FundingPool")
-    .map((pool: any) => ({
-      ...pool,
-      PoolName: pool.PoolName ? hexToUtf8(pool.PoolName) : "",
-      PoolData: pool.PoolData ? hexToUtf8(pool.PoolData) : ""
-    }))
-    .sort((a, b) => a.PoolName.localeCompare(b.PoolName, 'es', { sensitivity: 'base' }));
+  const RIPPLE_EPOCH_UNIX = 946684800;
+  const nowRippleTimestamp = () => Math.floor(Date.now() / 1000) - RIPPLE_EPOCH_UNIX;
+  const now = nowRippleTimestamp();
 
-  console.log("getAvailableFundings pools:", pools);
+  const pools = (res.result?.state || [])
+    .filter((o: any) => o.LedgerEntryType === "FundingPool")
+    .map((pool: any) => {
+      // Variables auxiliares
+      const PoolName = pool.PoolName ? hexToUtf8(pool.PoolName) : "";
+      const PoolData = pool.PoolData ? hexToUtf8(pool.PoolData) : "";
+      const cancelAfter = pool.CancelAfter ?? null;
+      let status = "Activo";
+      let timeLeft: number | null = null;
+
+      if (cancelAfter !== null) {
+        if (cancelAfter < now) {
+          status = "Expirado";
+        } else {
+          status = "Activo";
+          timeLeft = cancelAfter - now;
+        }
+      }
+
+      let timeLeftStr = "";
+      if (timeLeft !== null) {
+        if (timeLeft < 60) timeLeftStr = `${timeLeft} segundos`;
+        else if (timeLeft < 3600) timeLeftStr = `${Math.floor(timeLeft / 60)} minutos ${timeLeft % 60} segundos`;
+        else if (timeLeft < 86400) timeLeftStr = `${Math.floor(timeLeft / 3600)} horas ${Math.floor((timeLeft % 3600) / 60)} minutos`;
+        else timeLeftStr = `${Math.floor(timeLeft / 86400)} días ${Math.floor((timeLeft % 86400) / 3600)} horas ${Math.floor((timeLeft % 3600) / 60)} minutos`;
+      }
+
+      return {
+        ...pool,
+        PoolName,
+        PoolData,
+        Status: status,
+        TimeLeft: timeLeftStr
+      };
+    })
+    .sort((a: any, b: any) => (a.PoolName || "").localeCompare(b.PoolName || "", "es", { sensitivity: "base" }));
+
+  //console.log("getAvailableFundings pools:", pools);
   return pools;
-}
+};
+
+// Ejemplo de llamada HTTP a tu plugin
+export const postPlugin = async (url: string, body: any) => {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+};

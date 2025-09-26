@@ -32,9 +32,9 @@ const InfoPoolComponent: React.FC<InfoPoolProps> = ({ client, address, wallet })
         <div className="pools-page">
             <h2>fundings en los que eres dueño</h2>
 
-            {data?.result?.account_objects2?.length ? (
+            {data?.result?.account_objects?.length ? (
                 <div className="pools-grid">
-                    {data.result.account_objects2.map((obj: any, i: number) => (
+                    {data.result.account_objects.map((obj: any, i: number) => (
                         <div key={i} className="card pool-card">
                             <div><b>Nombre:</b> {obj.PoolName}</div>
                             <div>
